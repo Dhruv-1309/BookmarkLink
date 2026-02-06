@@ -1,0 +1,33 @@
+# Java/Maven
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
+/.mvn/wrapper/maven-wrapper.jar
+**/target/
+
+# Logs
+*.log
+
+# IntelliJ
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (if added later)
+node_modules/
+
+# Python venv
+.venv/
