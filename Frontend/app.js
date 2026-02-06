@@ -122,11 +122,11 @@ const render = () => {
   });
 
   elements.linksGrid.innerHTML = sorted
-    .map((link) => buildLinkCard(link))
+    .map((link, index) => buildLinkCard(link, index))
     .join("");
 
   elements.archiveList.innerHTML = archiveLinks
-    .map((link) => buildArchiveCard(link))
+    .map((link, index) => buildArchiveCard(link, index))
     .join("");
 
   const expiringSoon = activeLinks.filter(
@@ -149,16 +149,18 @@ const render = () => {
   }
 };
 
-const buildLinkCard = (link) => {
+const buildLinkCard = (link, index = 0) => {
   const { daysLeft, percentage } = getHealth(link);
   const badge = getHealthLabel(daysLeft);
   const nextNotice =
     daysLeft === 0 ? "Expired — move to archive" : `${daysLeft} days left`;
 
+  const delay = index * 50; // stagger 50ms per item
+
   return `
-    <article class="link-card">
+    <article class="link-card" style="animation-delay: ${delay}ms">
       <div class="link-header">
-        <div>
+        <div class="link-content">
           <p class="link-title">${link.title}</p>
           <a href="${link.url}" target="_blank" rel="noopener" class="muted link-url">${link.url}</a>
         </div>
@@ -169,7 +171,7 @@ const buildLinkCard = (link) => {
       </div>
       <div class="meta">
         <span>Saved ${formatDate(link.createdAt)}</span>
-        <span>•</span>
+        <span class="dot"></span>
         <span>${nextNotice}</span>
       </div>
       <div class="tags">
@@ -184,13 +186,15 @@ const buildLinkCard = (link) => {
   `;
 };
 
-const buildArchiveCard = (link) => {
+const buildArchiveCard = (link, index = 0) => {
   const { daysLeft } = getHealth(link);
   const badge = getHealthLabel(daysLeft);
+  const delay = index * 50;
+
   return `
-    <div class="card">
+    <div class="card" style="animation: fadeIn 0.5s ease-out backwards; animation-delay: ${delay}ms">
       <div class="link-header">
-        <div>
+        <div class="link-content">
           <p class="link-title">${link.title}</p>
           <a href="${link.url}" target="_blank" rel="noopener" class="muted link-url">${link.url}</a>
         </div>
