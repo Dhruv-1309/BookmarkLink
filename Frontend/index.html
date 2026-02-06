@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BookmarkLink — Healthy Bookmarks</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+
+<body>
+    <header class="topbar">
+        <div class="brand">
+            <span class="logo">🔖</span>
+            <div>
+                <p class="brand-title">BookmarkLink</p>
+                <p class="brand-subtitle">Healthy bookmarks that don’t rot.</p>
+            </div>
+        </div>
+        <nav class="topbar-actions">
+            <button class="ghost" id="openSettings">Notification Settings</button>
+            <button class="primary" id="openArchive">Open Archive</button>
+        </nav>
+    </header>
+
+    <main class="layout">
+        <section class="panel">
+            <h1>Save a link with a 45‑day health window</h1>
+            <p class="muted">
+                Each link starts with full health and declines over 45 days. When it expires,
+                you’ll get a reminder to renew from your archive.
+            </p>
+
+            <form id="linkForm" class="card">
+                <div class="form-row">
+                    <label>
+                        Link title
+                        <input type="text" name="title" placeholder="Design system docs" required />
+                    </label>
+                    <label>
+                        URL
+                        <input type="url" name="url" placeholder="https://example.com" required />
+                    </label>
+                </div>
+                <div class="form-row">
+                    <label>
+                        Tags (comma separated)
+                        <input type="text" name="tags" placeholder="ux, docs, inspiration" />
+                    </label>
+                    <label>
+                        Notes
+                        <input type="text" name="notes" placeholder="Remember the layout grid" />
+                    </label>
+                </div>
+                <button type="submit" class="primary full">Save link</button>
+            </form>
+
+            <div class="stats">
+                <div class="stat">
+                    <p class="stat-label">Active</p>
+                    <p class="stat-value" id="activeCount">0</p>
+                </div>
+                <div class="stat">
+                    <p class="stat-label">Expiring soon</p>
+                    <p class="stat-value" id="expiringCount">0</p>
+                </div>
+                <div class="stat">
+                    <p class="stat-label">Archived</p>
+                    <p class="stat-value" id="archivedCount">0</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="section-header">
+                <h2>Active links</h2>
+                <div class="filters">
+                    <input id="searchInput" type="search" placeholder="Search links…" />
+                    <select id="sortSelect">
+                        <option value="health">Sort by health</option>
+                        <option value="recent">Sort by most recent</option>
+                        <option value="title">Sort by title</option>
+                    </select>
+                </div>
+            </div>
+            <div id="linksGrid" class="grid"></div>
+        </section>
+    </main>
+
+    <aside class="drawer" id="settingsDrawer" aria-hidden="true">
+        <div class="drawer-content">
+            <header>
+                <h3>Notification settings</h3>
+                <button class="ghost" data-close="settings">Close</button>
+            </header>
+            <p class="muted">
+                Settings are stored in the Spring Boot backend. Notifications can be
+                wired later using this data.
+            </p>
+            <form id="settingsForm" class="stack">
+                <label>
+                    Gmail address
+                    <input type="email" name="email" placeholder="you@gmail.com" />
+                </label>
+                <label>
+                    Phone number
+                    <input type="tel" name="phone" placeholder="+1 555 000 1234" />
+                </label>
+                <label class="toggle">
+                    <input type="checkbox" name="emailEnabled" checked />
+                    <span>Email reminders enabled</span>
+                </label>
+                <label class="toggle">
+                    <input type="checkbox" name="smsEnabled" />
+                    <span>SMS reminders enabled</span>
+                </label>
+                <label>
+                    Reminder window (days before expiry)
+                    <input type="number" name="reminderWindow" value="5" min="1" max="14" />
+                </label>
+                <button class="primary">Save settings</button>
+            </form>
+        </div>
+    </aside>
+
+    <aside class="drawer" id="archiveDrawer" aria-hidden="true">
+        <div class="drawer-content">
+            <header>
+                <h3>Archive</h3>
+                <button class="ghost" data-close="archive">Close</button>
+            </header>
+            <p class="muted">
+                Expired links live here until you renew or delete them.
+            </p>
+            <div id="archiveList" class="stack"></div>
+        </div>
+    </aside>
+
+    <div class="toast" id="toast" aria-live="polite"></div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
