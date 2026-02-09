@@ -34,3 +34,6 @@ node_modules/
 
 # Local secrets
 Backend/src/main/resources/application-local.properties
+
+# Local data
+Backend/data/*.json

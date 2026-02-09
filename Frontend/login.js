@@ -72,7 +72,8 @@ const fetchJson = async (url, options = {}) => {
 };
 
 const getStoredToken = () =>
-  localStorage.getItem(AUTH_TOKEN_KEY) || sessionStorage.getItem(AUTH_TOKEN_KEY);
+  localStorage.getItem(AUTH_TOKEN_KEY) ||
+  sessionStorage.getItem(AUTH_TOKEN_KEY);
 
 const storeToken = (token, remember) => {
   if (remember) {
@@ -157,4 +158,3 @@ if (getStoredToken()) {
 
 loginForm.addEventListener("submit", handleLogin);
 signupForm.addEventListener("submit", handleSignup);
-

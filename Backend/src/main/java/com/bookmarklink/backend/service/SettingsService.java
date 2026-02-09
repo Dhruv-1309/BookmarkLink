@@ -16,9 +16,7 @@ public class SettingsService {
             return settings;
         }
         settings.setEmail(incoming.getEmail());
-        settings.setPhone(incoming.getPhone());
         settings.setEmailEnabled(incoming.isEmailEnabled());
-        settings.setSmsEnabled(incoming.isSmsEnabled());
         settings.setReminderWindow(incoming.getReminderWindow());
         return settings;
     }

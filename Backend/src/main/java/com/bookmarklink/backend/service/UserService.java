@@ -5,6 +5,7 @@ import com.bookmarklink.backend.model.User;
 import com.bookmarklink.backend.model.UserPublic;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -26,6 +27,7 @@ public class UserService {
 
     private final ObjectMapper objectMapper;
     private final Path usersPath;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final Map<String, String> tokenToUserId = new ConcurrentHashMap<>();
     private List<User> cachedUsers = new ArrayList<>();
 
@@ -38,7 +40,7 @@ public class UserService {
     public synchronized Optional<User> authenticate(String email, String password) {
         return cachedUsers.stream()
                 .filter(user -> user.getEmail().equalsIgnoreCase(email))
-                .filter(user -> user.getPassword().equals(password))
+                .filter(user -> passwordEncoder.matches(password, user.getPassword()))
                 .findFirst();
     }
 
@@ -52,7 +54,7 @@ public class UserService {
                 UUID.randomUUID().toString(),
                 request.getName(),
                 request.getEmail(),
-                request.getPassword());
+                passwordEncoder.encode(request.getPassword()));
         cachedUsers.add(user);
         saveUsers();
         return user;
@@ -96,6 +98,11 @@ public class UserService {
                 return objectMapper.readValue(usersPath.toFile(), new TypeReference<List<User>>() {
                 });
             }
+            boolean updated = ensureHashedPasswords(users);
+            if (updated) {
+                cachedUsers = users;
+                saveUsers();
+            }
             return users;
         } catch (IOException ex) {
             seedDefaultUser();
@@ -124,9 +131,23 @@ public class UserService {
                 Files.createDirectories(usersPath.getParent());
             }
             List<User> seed = new ArrayList<>();
-            seed.add(new User(UUID.randomUUID().toString(), DEFAULT_NAME, DEFAULT_EMAIL, DEFAULT_PASSWORD));
+            seed.add(new User(UUID.randomUUID().toString(), DEFAULT_NAME, DEFAULT_EMAIL,
+                    passwordEncoder.encode(DEFAULT_PASSWORD)));
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(usersPath.toFile(), seed);
         } catch (IOException ignored) {
         }
+    }
+
+    private boolean ensureHashedPasswords(List<User> users) {
+        boolean updated = false;
+        for (User user : users) {
+            String password = user.getPassword();
+            if (password == null || password.startsWith("$2")) {
+                continue;
+            }
+            user.setPassword(passwordEncoder.encode(password));
+            updated = true;
+        }
+        return updated;
     }
 }

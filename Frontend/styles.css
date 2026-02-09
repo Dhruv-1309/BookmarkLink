@@ -74,8 +74,18 @@ body {
 }
 
 .logo {
-    font-size: 28px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     animation: bounce 2s infinite;
+}
+
+.logo svg {
+    width: 36px;
+    height: 36px;
+    display: block;
 }
 
 @keyframes bounce {
@@ -722,20 +732,55 @@ button:active {
     border-radius: 8px;
 }
 
-.remember-row {
+/* Toggle Switch Style */
+.remember-toggle {
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 13px;
-    color: #444;
-    align-self: flex-start;
-    margin-top: 6px;
+    justify-content: space-between;
+    width: 100%;
+    font-size: 14px;
+    color: #555;
+    cursor: pointer;
+    margin-top: 10px;
+    margin-bottom: 5px;
 }
 
-.remember-row input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: #ff9644;
+.remember-toggle input {
+    display: none;
+}
+
+.slider {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    background-color: #ddd;
+    border-radius: 20px;
+    transition: 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.slider::before {
+    content: "";
+    position: absolute;
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.remember-toggle input:checked+.slider {
+    background-color: #FF9644;
+}
+
+.remember-toggle input:checked+.slider::before {
+    transform: translateX(18px);
+}
+
+.label-text {
+    font-weight: 500;
 }
 
 .primary-btn {
@@ -802,7 +847,8 @@ button:active {
         display: none;
     }
 
-    .sign-in-container, .sign-up-container {
+    .sign-in-container,
+    .sign-up-container {
         width: 100%;
         position: relative;
         height: auto;

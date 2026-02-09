@@ -21,7 +21,10 @@ public class NotificationService {
     private final SettingsService settingsService;
     private final JavaMailSender mailSender;
 
-    public NotificationService(LinkService linkService, SettingsService settingsService, JavaMailSender mailSender) {
+    public NotificationService(
+            LinkService linkService,
+            SettingsService settingsService,
+            JavaMailSender mailSender) {
         this.linkService = linkService;
         this.settingsService = settingsService;
         this.mailSender = mailSender;
@@ -97,4 +100,5 @@ public class NotificationService {
         body.append("\nOpen the app to renew or archive these links.");
         return body.toString();
     }
+
 }

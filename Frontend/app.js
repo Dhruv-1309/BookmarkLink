@@ -27,15 +27,14 @@ const state = {
   links: [],
   settings: {
     email: "",
-    phone: "",
     emailEnabled: true,
-    smsEnabled: false,
     reminderWindow: 5,
   },
 };
 
 const getAuthToken = () =>
-  localStorage.getItem(AUTH_TOKEN_KEY) || sessionStorage.getItem(AUTH_TOKEN_KEY);
+  localStorage.getItem(AUTH_TOKEN_KEY) ||
+  sessionStorage.getItem(AUTH_TOKEN_KEY);
 
 const requireAuth = () => {
   if (!getAuthToken()) {
@@ -292,9 +291,7 @@ const updateLinkStatus = async (actionId, action) => {
 
 const renderSettings = () => {
   elements.settingsForm.email.value = state.settings.email;
-  elements.settingsForm.phone.value = state.settings.phone;
   elements.settingsForm.emailEnabled.checked = state.settings.emailEnabled;
-  elements.settingsForm.smsEnabled.checked = state.settings.smsEnabled;
   elements.settingsForm.reminderWindow.value = state.settings.reminderWindow;
 };
 
@@ -303,9 +300,7 @@ const saveSettings = async (event) => {
   const formData = new FormData(elements.settingsForm);
   const payload = {
     email: formData.get("email").trim(),
-    phone: formData.get("phone").trim(),
     emailEnabled: formData.get("emailEnabled") === "on",
-    smsEnabled: formData.get("smsEnabled") === "on",
     reminderWindow: Number(formData.get("reminderWindow")) || 5,
   };
   try {
