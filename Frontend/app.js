@@ -1,6 +1,9 @@
 const DAY_MS = 1000 * 60 * 60 * 24;
 const HEALTH_DAYS = 45;
 const API_BASE = "http://localhost:8080/api";
+const AUTH_TOKEN_KEY = "bookmarklink.token";
+const AUTH_REMEMBER_KEY = "bookmarklink.remember";
+const AUTH_EMAIL_KEY = "bookmarklink.email";
 
 const elements = {
   linkForm: document.getElementById("linkForm"),
@@ -17,6 +20,7 @@ const elements = {
   archiveList: document.getElementById("archiveList"),
   settingsForm: document.getElementById("settingsForm"),
   toast: document.getElementById("toast"),
+  logoutButton: document.getElementById("logoutButton"),
 };
 
 const state = {
@@ -30,14 +34,32 @@ const state = {
   },
 };
 
+const getAuthToken = () =>
+  localStorage.getItem(AUTH_TOKEN_KEY) || sessionStorage.getItem(AUTH_TOKEN_KEY);
+
+const requireAuth = () => {
+  if (!getAuthToken()) {
+    window.location.href = "login.html";
+  }
+};
+
 const fetchJson = async (url, options = {}) => {
+  const token = getAuthToken();
   const response = await fetch(url, {
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { "X-Auth-Token": token } : {}),
       ...(options.headers || {}),
     },
     ...options,
   });
+
+  if (response.status === 401) {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    sessionStorage.removeItem(AUTH_TOKEN_KEY);
+    window.location.href = "login.html";
+    throw new Error("Unauthorized");
+  }
 
   if (!response.ok) {
     const message = await response.text();
@@ -181,6 +203,7 @@ const buildLinkCard = (link, index = 0) => {
       <div class="card-actions">
         <button class="ghost" data-action="renew" data-id="${link.id}">Renew 45 days</button>
         <button class="ghost" data-action="archive" data-id="${link.id}">Archive</button>
+        <button class="ghost" data-action="delete" data-id="${link.id}">Delete</button>
       </div>
     </article>
   `;
@@ -253,6 +276,10 @@ const updateLinkStatus = async (actionId, action) => {
       showToast("Link restored and renewed.");
     }
     if (action === "delete") {
+      const confirmed = window.confirm("Delete this link permanently?");
+      if (!confirmed) {
+        return;
+      }
       await api.deleteLink(actionId);
       state.links = state.links.filter((item) => item.id !== actionId);
       showToast("Link deleted permanently.");
@@ -337,6 +364,7 @@ const refreshExpired = async () => {
 };
 
 const boot = async () => {
+  requireAuth();
   try {
     const [links, settings] = await Promise.all([
       api.getLinks(),
@@ -359,6 +387,14 @@ setInterval(() => {
 
 elements.linkForm.addEventListener("submit", addLink);
 
+const handleLogout = () => {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  sessionStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(AUTH_REMEMBER_KEY);
+  localStorage.removeItem(AUTH_EMAIL_KEY);
+  window.location.href = "login.html";
+};
+
 const handleCardActions = (event) => {
   const button = event.target.closest("button");
   if (!button) return;
@@ -380,6 +416,10 @@ elements.sortSelect.addEventListener("change", render);
 
 // settings save
 elements.settingsForm.addEventListener("submit", saveSettings);
+
+if (elements.logoutButton) {
+  elements.logoutButton.addEventListener("click", handleLogout);
+}
 
 // drawer toggles
 // open settings
