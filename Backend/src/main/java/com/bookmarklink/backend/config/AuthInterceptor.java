@@ -34,6 +34,8 @@ public class AuthInterceptor implements HandlerInterceptor {
             return false;
         }
 
+        userService.getUserIdForToken(token).ifPresent(userId -> request.setAttribute("userId", userId));
+
         return true;
     }
 }

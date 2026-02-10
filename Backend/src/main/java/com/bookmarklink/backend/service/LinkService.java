@@ -1,42 +1,71 @@
 package com.bookmarklink.backend.service;
 
 import com.bookmarklink.backend.model.Link;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
+@DependsOn("databaseInitializer")
 public class LinkService {
-    private final Map<String, Link> store = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper;
-    private final Path linksPath;
+    private final JdbcTemplate jdbcTemplate;
+    private final RowMapper<Link> linkRowMapper = (rs, rowNum) -> new Link(
+            rs.getString("id"),
+            rs.getString("title"),
+            rs.getString("url"),
+            parseTags(rs.getString("tags")),
+            rs.getString("notes"),
+            parseInstant(rs.getString("created_at")),
+            rs.getString("status"),
+            parseInstant(rs.getString("renewed_at")),
+            parseInstant(rs.getString("archived_at")));
 
-    public LinkService(ObjectMapper objectMapper) {
+    public LinkService(ObjectMapper objectMapper, JdbcTemplate jdbcTemplate) {
         this.objectMapper = objectMapper;
-        this.linksPath = Paths.get("data", "links.json");
-        loadOrSeed();
+        this.jdbcTemplate = jdbcTemplate;
     }
 
-    public List<Link> getAll() {
-        List<Link> links = new ArrayList<>(store.values());
+    public List<Link> getAllForNotifications() {
+        List<Link> links = jdbcTemplate.query(
+                "SELECT id, title, url, tags, notes, created_at, status, renewed_at, archived_at " +
+                        "FROM links ORDER BY created_at DESC",
+                linkRowMapper);
+        for (Link link : links) {
+            link.setOwnerId(null);
+        }
         links.sort(Comparator.comparing(Link::getCreatedAt).reversed());
         return links;
     }
 
-    public Link create(Link input) {
+    public List<Link> getAllForUser(String ownerId) {
+        List<Link> links = jdbcTemplate.query(
+                "SELECT id, title, url, tags, notes, created_at, status, renewed_at, archived_at, owner_id " +
+                        "FROM links WHERE owner_id = ? ORDER BY created_at DESC",
+                (rs, rowNum) -> {
+                    Link link = linkRowMapper.mapRow(rs, rowNum);
+                    if (link != null) {
+                        link.setOwnerId(rs.getString("owner_id"));
+                    }
+                    return link;
+                },
+                ownerId);
+        links.sort(Comparator.comparing(Link::getCreatedAt).reversed());
+        return links;
+    }
+
+    public Link create(String ownerId, Link input) {
         String id = UUID.randomUUID().toString();
         Instant now = Instant.now();
         Link link = new Link(
@@ -49,134 +78,106 @@ public class LinkService {
                 "active",
                 null,
                 null);
-        store.put(id, link);
-        saveLinks();
+        link.setOwnerId(ownerId);
+        insertLink(link);
         return link;
     }
 
-    public Optional<Link> findById(String id) {
-        return Optional.ofNullable(store.get(id));
+    public Optional<Link> findById(String ownerId, String id) {
+        List<Link> links = jdbcTemplate.query(
+                "SELECT id, title, url, tags, notes, created_at, status, renewed_at, archived_at, owner_id " +
+                        "FROM links WHERE id = ? AND owner_id = ?",
+                (rs, rowNum) -> {
+                    Link link = linkRowMapper.mapRow(rs, rowNum);
+                    if (link != null) {
+                        link.setOwnerId(rs.getString("owner_id"));
+                    }
+                    return link;
+                },
+                id,
+                ownerId);
+        return links.stream().findFirst();
     }
 
-    public Optional<Link> renew(String id) {
-        Link link = store.get(id);
-        if (link == null) {
-            return Optional.empty();
-        }
-        link.setRenewedAt(Instant.now());
-        link.setStatus("active");
-        saveLinks();
-        return Optional.of(link);
+    public Optional<Link> renew(String ownerId, String id) {
+        Instant now = Instant.now();
+        int updated = jdbcTemplate.update(
+                "UPDATE links SET renewed_at = ?, status = ? WHERE id = ? AND owner_id = ?",
+                now.toString(),
+                "active",
+                id,
+                ownerId);
+        return updated > 0 ? findById(ownerId, id) : Optional.empty();
     }
 
-    public Optional<Link> archive(String id) {
-        Link link = store.get(id);
-        if (link == null) {
-            return Optional.empty();
-        }
-        link.setStatus("archived");
-        link.setArchivedAt(Instant.now());
-        saveLinks();
-        return Optional.of(link);
+    public Optional<Link> archive(String ownerId, String id) {
+        Instant now = Instant.now();
+        int updated = jdbcTemplate.update(
+                "UPDATE links SET status = ?, archived_at = ? WHERE id = ? AND owner_id = ?",
+                "archived",
+                now.toString(),
+                id,
+                ownerId);
+        return updated > 0 ? findById(ownerId, id) : Optional.empty();
     }
 
-    public Optional<Link> restore(String id) {
-        Link link = store.get(id);
-        if (link == null) {
-            return Optional.empty();
-        }
-        link.setStatus("active");
-        link.setRenewedAt(Instant.now());
-        link.setArchivedAt(null);
-        saveLinks();
-        return Optional.of(link);
+    public Optional<Link> restore(String ownerId, String id) {
+        Instant now = Instant.now();
+        int updated = jdbcTemplate.update(
+                "UPDATE links SET status = ?, renewed_at = ?, archived_at = NULL WHERE id = ? AND owner_id = ?",
+                "active",
+                now.toString(),
+                id,
+                ownerId);
+        return updated > 0 ? findById(ownerId, id) : Optional.empty();
     }
 
-    public boolean delete(String id) {
-        boolean removed = store.remove(id) != null;
-        if (removed) {
-            saveLinks();
-        }
-        return removed;
+    public boolean delete(String ownerId, String id) {
+        return jdbcTemplate.update("DELETE FROM links WHERE id = ? AND owner_id = ?", id, ownerId) > 0;
     }
 
-    private void loadOrSeed() {
-        List<Link> links = loadLinks();
-        if (links.isEmpty()) {
-            links = seed();
-        }
-        for (Link link : links) {
-            store.put(link.getId(), link);
-        }
+    private void insertLink(Link link) {
+        jdbcTemplate.update(
+                "INSERT INTO links (id, owner_id, title, url, tags, notes, created_at, status, renewed_at, archived_at) "
+                        +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                link.getId(),
+                link.getOwnerId(),
+                link.getTitle(),
+                link.getUrl(),
+                toTagsJson(link.getTags()),
+                link.getNotes(),
+                toIso(link.getCreatedAt()),
+                link.getStatus(),
+                toIso(link.getRenewedAt()),
+                toIso(link.getArchivedAt()));
     }
 
-    private List<Link> loadLinks() {
+    private String toIso(Instant instant) {
+        return instant == null ? null : instant.toString();
+    }
+
+    private Instant parseInstant(String value) {
+        return value == null || value.isBlank() ? null : Instant.parse(value);
+    }
+
+    private List<String> parseTags(String value) {
+        if (value == null || value.isBlank()) {
+            return new ArrayList<>();
+        }
         try {
-            if (Files.notExists(linksPath)) {
-                return new ArrayList<>();
-            }
-            List<Link> links = objectMapper.readValue(linksPath.toFile(), new TypeReference<List<Link>>() {
+            return objectMapper.readValue(value, new TypeReference<List<String>>() {
             });
-            return links == null ? new ArrayList<>() : links;
         } catch (IOException ignored) {
             return new ArrayList<>();
         }
     }
 
-    private void saveLinks() {
+    private String toTagsJson(List<String> tags) {
         try {
-            if (Files.notExists(linksPath.getParent())) {
-                Files.createDirectories(linksPath.getParent());
-            }
-            objectMapper.writerWithDefaultPrettyPrinter().writeValue(linksPath.toFile(),
-                    new ArrayList<>(store.values()));
+            return objectMapper.writeValueAsString(tags == null ? new ArrayList<>() : tags);
         } catch (IOException ignored) {
+            return "[]";
         }
-    }
-
-    private List<Link> seed() {
-        Instant now = Instant.now();
-        Link first = new Link(
-                UUID.randomUUID().toString(),
-                "Design system typography",
-                "https://example.com/typography",
-                List.of("design", "ui"),
-                "Use for heading scale",
-                now.minusSeconds(60L * 60 * 24 * 6),
-                "active",
-                null,
-                null);
-        Link second = new Link(
-                UUID.randomUUID().toString(),
-                "Next.js routing cheatsheet",
-                "https://example.com/nextjs",
-                List.of("frontend", "docs"),
-                "",
-                now.minusSeconds(60L * 60 * 24 * 40),
-                "active",
-                null,
-                null);
-        Link third = new Link(
-                UUID.randomUUID().toString(),
-                "AI prompts library",
-                "https://example.com/prompts",
-                List.of("ai"),
-                "Review weekly",
-                now.minusSeconds(60L * 60 * 24 * 52),
-                "archived",
-                now.minusSeconds(60L * 60 * 24 * 10),
-                now.minusSeconds(60L * 60 * 24 * 10));
-        List<Link> seed = new ArrayList<>();
-        seed.add(first);
-        seed.add(second);
-        seed.add(third);
-        try {
-            if (Files.notExists(linksPath.getParent())) {
-                Files.createDirectories(linksPath.getParent());
-            }
-            objectMapper.writerWithDefaultPrettyPrinter().writeValue(linksPath.toFile(), seed);
-        } catch (IOException ignored) {
-        }
-        return seed;
     }
 }

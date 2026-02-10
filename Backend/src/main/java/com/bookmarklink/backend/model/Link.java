@@ -3,6 +3,7 @@ package com.bookmarklink.backend.model;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public class Link {
     private String id;
@@ -14,6 +15,7 @@ public class Link {
     private String status;
     private Instant renewedAt;
     private Instant archivedAt;
+    private String ownerId;
 
     public Link() {
     }
@@ -103,5 +105,15 @@ public class Link {
 
     public void setArchivedAt(Instant archivedAt) {
         this.archivedAt = archivedAt;
+    }
+
+    @JsonIgnore
+    public String getOwnerId() {
+        return ownerId;
+    }
+
+    @JsonIgnore
+    public void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
     }
 }

@@ -335,6 +335,15 @@ const replaceLink = (updated) => {
   }
 };
 
+const initTypewriter = () => {
+  const targets = document.querySelectorAll(".typewriter");
+  targets.forEach((el) => {
+    const text = (el.textContent || "").trim();
+    if (!text) return;
+    el.style.setProperty("--tw-ch", String(text.length));
+  });
+};
+
 const refreshExpired = async () => {
   const expired = state.links.filter(
     (link) => link.status === "active" && getHealth(link).daysLeft === 0,
@@ -360,6 +369,7 @@ const refreshExpired = async () => {
 
 const boot = async () => {
   requireAuth();
+  initTypewriter();
   try {
     const [links, settings] = await Promise.all([
       api.getLinks(),

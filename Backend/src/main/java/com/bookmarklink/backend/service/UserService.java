@@ -3,15 +3,12 @@ package com.bookmarklink.backend.service;
 import com.bookmarklink.backend.model.SignupRequest;
 import com.bookmarklink.backend.model.User;
 import com.bookmarklink.backend.model.UserPublic;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.context.annotation.DependsOn;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -20,20 +17,20 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
+@DependsOn("databaseInitializer")
 public class UserService {
-    private static final String DEFAULT_EMAIL = "demo@bookmarklink.com";
-    private static final String DEFAULT_PASSWORD = "demo123";
-    private static final String DEFAULT_NAME = "Demo User";
-
-    private final ObjectMapper objectMapper;
-    private final Path usersPath;
+    private final JdbcTemplate jdbcTemplate;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final Map<String, String> tokenToUserId = new ConcurrentHashMap<>();
     private List<User> cachedUsers = new ArrayList<>();
+    private final RowMapper<User> userRowMapper = (rs, rowNum) -> new User(
+            rs.getString("id"),
+            rs.getString("name"),
+            rs.getString("email"),
+            rs.getString("password"));
 
-    public UserService(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-        this.usersPath = Paths.get("data", "users.json");
+    public UserService(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
         this.cachedUsers = loadUsers();
     }
 
@@ -55,8 +52,13 @@ public class UserService {
                 request.getName(),
                 request.getEmail(),
                 passwordEncoder.encode(request.getPassword()));
+        jdbcTemplate.update(
+                "INSERT INTO users (id, name, email, password) VALUES (?, ?, ?, ?)",
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getPassword());
         cachedUsers.add(user);
-        saveUsers();
         return user;
     }
 
@@ -68,6 +70,13 @@ public class UserService {
 
     public boolean isValidToken(String token) {
         return token != null && tokenToUserId.containsKey(token);
+    }
+
+    public Optional<String> getUserIdForToken(String token) {
+        if (token == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(tokenToUserId.get(token));
     }
 
     public Optional<UserPublic> getUserByToken(String token) {
@@ -86,56 +95,12 @@ public class UserService {
     }
 
     private synchronized List<User> loadUsers() {
-        try {
-            if (Files.notExists(usersPath)) {
-                seedDefaultUser();
-            }
-
-            List<User> users = objectMapper.readValue(usersPath.toFile(), new TypeReference<List<User>>() {
-            });
-            if (users == null || users.isEmpty()) {
-                seedDefaultUser();
-                return objectMapper.readValue(usersPath.toFile(), new TypeReference<List<User>>() {
-                });
-            }
-            boolean updated = ensureHashedPasswords(users);
-            if (updated) {
-                cachedUsers = users;
-                saveUsers();
-            }
-            return users;
-        } catch (IOException ex) {
-            seedDefaultUser();
-            try {
-                return objectMapper.readValue(usersPath.toFile(), new TypeReference<List<User>>() {
-                });
-            } catch (IOException ignored) {
-                return new ArrayList<>();
-            }
+        List<User> users = jdbcTemplate.query("SELECT id, name, email, password FROM users", userRowMapper);
+        boolean updated = ensureHashedPasswords(users);
+        if (updated) {
+            cachedUsers = users;
         }
-    }
-
-    private void saveUsers() {
-        try {
-            if (Files.notExists(usersPath.getParent())) {
-                Files.createDirectories(usersPath.getParent());
-            }
-            objectMapper.writerWithDefaultPrettyPrinter().writeValue(usersPath.toFile(), cachedUsers);
-        } catch (IOException ignored) {
-        }
-    }
-
-    private void seedDefaultUser() {
-        try {
-            if (Files.notExists(usersPath.getParent())) {
-                Files.createDirectories(usersPath.getParent());
-            }
-            List<User> seed = new ArrayList<>();
-            seed.add(new User(UUID.randomUUID().toString(), DEFAULT_NAME, DEFAULT_EMAIL,
-                    passwordEncoder.encode(DEFAULT_PASSWORD)));
-            objectMapper.writerWithDefaultPrettyPrinter().writeValue(usersPath.toFile(), seed);
-        } catch (IOException ignored) {
-        }
+        return users;
     }
 
     private boolean ensureHashedPasswords(List<User> users) {
@@ -145,7 +110,9 @@ public class UserService {
             if (password == null || password.startsWith("$2")) {
                 continue;
             }
-            user.setPassword(passwordEncoder.encode(password));
+            String hashed = passwordEncoder.encode(password);
+            user.setPassword(hashed);
+            jdbcTemplate.update("UPDATE users SET password = ? WHERE id = ?", hashed, user.getId());
             updated = true;
         }
         return updated;

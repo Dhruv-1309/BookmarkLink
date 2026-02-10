@@ -68,7 +68,7 @@ public class NotificationService {
         List<Link> expiring = new ArrayList<>();
         Instant now = Instant.now();
 
-        for (Link link : linkService.getAll()) {
+        for (Link link : linkService.getAllForNotifications()) {
             if (!"active".equalsIgnoreCase(link.getStatus())) {
                 continue;
             }
