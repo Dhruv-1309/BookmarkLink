@@ -158,3 +158,29 @@ if (getStoredToken()) {
 
 loginForm.addEventListener("submit", handleLogin);
 signupForm.addEventListener("submit", handleSignup);
+
+const setupPasswordToggles = () => {
+  const toggleButtons = document.querySelectorAll(".password-toggle");
+  toggleButtons.forEach((button) => {
+    const targetId = button.getAttribute("data-target");
+    const input = targetId ? document.getElementById(targetId) : null;
+    if (!input) return;
+
+    button.addEventListener("click", () => {
+      const showPassword = input.type === "password";
+      input.type = showPassword ? "text" : "password";
+      button.textContent = showPassword ? "Hide" : "Show";
+      button.classList.toggle("is-visible", showPassword);
+      button.classList.toggle("is-hidden", !showPassword);
+      input.classList.toggle("is-visible", showPassword);
+      input.classList.toggle("is-hidden", !showPassword);
+      button.setAttribute("aria-pressed", showPassword ? "true" : "false");
+      button.setAttribute(
+        "aria-label",
+        showPassword ? "Hide password" : "Show password"
+      );
+    });
+  });
+};
+
+setupPasswordToggles();

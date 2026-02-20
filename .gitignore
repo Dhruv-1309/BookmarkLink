@@ -37,3 +37,13 @@ Backend/src/main/resources/application-local.properties
 
 # Local data
 Backend/data/*.json
+Backend/Backend/data/
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment files
+.env
+.env.*

@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BookmarkLink - Login</title>
-    <link rel="stylesheet" href="styles.css?v=2" />
+    <link rel="stylesheet" href="styles.css?v=3" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -23,7 +23,10 @@
                 <p class="social-text">or use your email for registration</p>
                 <input type="text" name="name" placeholder="Name" required />
                 <input type="email" name="email" placeholder="Email" required />
-                <input type="password" name="password" placeholder="Password" required />
+                <div class="password-field">
+                    <input id="signupPassword" type="password" name="password" placeholder="Password" required />
+                    <button class="password-toggle" type="button" data-target="signupPassword" aria-label="Show password" aria-pressed="false">Show</button>
+                </div>
                 <button type="submit" class="primary-btn">Sign Up</button>
                 <div class="mobile-toggle">
                     <p>Already have an account? <a href="#" id="mobileSignIn">Sign In</a></p>
@@ -38,7 +41,10 @@
                 <p class="social-text">Healthy bookmarks that don’t rot.</p>
                 <div id="authMessage" class="auth-message" hidden></div>
                 <input type="email" name="email" placeholder="Email" required />
-                <input type="password" name="password" placeholder="Password" required />
+                <div class="password-field">
+                    <input id="loginPassword" type="password" name="password" placeholder="Password" required />
+                    <button class="password-toggle" type="button" data-target="loginPassword" aria-label="Show password" aria-pressed="false">Show</button>
+                </div>
                 <label class="remember-toggle">
                     <span class="label-text">Remember me</span>
                     <input type="checkbox" id="rememberMe" />
@@ -68,7 +74,7 @@
         </div>
     </main>
 
-    <script src="login.js?v=2"></script>
+    <script src="login.js?v=3"></script>
 </body>
 
 </html>

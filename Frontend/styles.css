@@ -755,6 +755,86 @@ button:active {
     border-radius: 8px;
 }
 
+.password-field {
+    position: relative;
+    width: 100%;
+}
+
+.password-field input {
+    padding-right: 70px;
+}
+
+.password-field input.is-visible {
+    animation: passwordReveal 0.25s ease;
+}
+
+.password-field input.is-hidden {
+    animation: passwordHide 0.25s ease;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 1px solid transparent;
+    background: #f2f2f2;
+    color: #555;
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    line-height: 1;
+    transition: background 0.2s ease, transform 0.2s ease, color 0.2s ease;
+}
+
+.password-toggle:hover {
+    background: #e9e9e9;
+}
+
+.password-toggle.is-visible {
+    animation: eyeToggleOn 0.25s ease;
+}
+
+.password-toggle.is-hidden {
+    animation: eyeToggleOff 0.25s ease;
+}
+
+@keyframes eyeToggleOn {
+    0% {
+        transform: translateY(-50%) scale(0.9);
+        opacity: 0.7;
+    }
+    60% {
+        transform: translateY(-50%) scale(1.05);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-50%) scale(1);
+    }
+}
+
+@keyframes eyeToggleOff {
+    0% {
+        transform: translateY(-50%) scale(1);
+        opacity: 1;
+    }
+    60% {
+        transform: translateY(-50%) scale(0.92);
+        opacity: 0.7;
+    }
+    100% {
+        transform: translateY(-50%) scale(1);
+        opacity: 1;
+    }
+}
+
+.password-toggle:focus {
+    outline: none;
+    border-color: #FF9644;
+    box-shadow: 0 0 0 2px rgba(255, 150, 68, 0.2);
+}
+
 /* Toggle Switch Style */
 .remember-toggle {
     display: flex;
@@ -898,5 +978,33 @@ button:active {
 
     .mobile-toggle {
         display: block;
+    }
+}
+
+@keyframes passwordReveal {
+    0% {
+        letter-spacing: 0.5px;
+        opacity: 0.7;
+    }
+    60% {
+        letter-spacing: 0;
+        opacity: 1;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes passwordHide {
+    0% {
+        letter-spacing: 0;
+        opacity: 1;
+    }
+    60% {
+        letter-spacing: 0.5px;
+        opacity: 0.7;
+    }
+    100% {
+        opacity: 1;
     }
 }
