@@ -5,26 +5,42 @@ import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
-import java.util.Map;
+import javax.sql.DataSource;
 
 @Component
 public class DatabaseInitializer {
     private final JdbcTemplate jdbcTemplate;
+    private final DataSource dataSource;
     private final Path dbDirPath = Paths.get("Backend", "data");
 
-    public DatabaseInitializer(JdbcTemplate jdbcTemplate) {
+    public DatabaseInitializer(JdbcTemplate jdbcTemplate, DataSource dataSource) {
         this.jdbcTemplate = jdbcTemplate;
+        this.dataSource = dataSource;
     }
 
     @PostConstruct
     public void initialize() {
-        ensureDbDirectory();
+        if (isSqlite()) {
+            ensureDbDirectory();
+        }
         createTables();
         ensureOwnerIdColumn();
+    }
+
+    private boolean isSqlite() {
+        try (Connection connection = dataSource.getConnection()) {
+            String url = connection.getMetaData().getURL();
+            return url != null && url.startsWith("jdbc:sqlite");
+        } catch (SQLException ignored) {
+            return false;
+        }
     }
 
     private void ensureDbDirectory() {
@@ -59,14 +75,29 @@ public class DatabaseInitializer {
     }
 
     private void ensureOwnerIdColumn() {
-        List<Map<String, Object>> columns = jdbcTemplate.queryForList("PRAGMA table_info(links)");
-        for (Map<String, Object> column : columns) {
-            Object name = column.get("name");
-            if (name != null && "owner_id".equalsIgnoreCase(name.toString())) {
-                return;
-            }
+        if (columnExists("links", "owner_id")) {
+            return;
         }
 
         jdbcTemplate.execute("ALTER TABLE links ADD COLUMN owner_id TEXT NOT NULL DEFAULT ''");
+    }
+
+    private boolean columnExists(String tableName, String columnName) {
+        try (Connection connection = dataSource.getConnection()) {
+            DatabaseMetaData metaData = connection.getMetaData();
+            if (columnExists(metaData, tableName, columnName)) {
+                return true;
+            }
+            return columnExists(metaData, tableName.toUpperCase(), columnName.toUpperCase());
+        } catch (SQLException ignored) {
+            return false;
+        }
+    }
+
+    private boolean columnExists(DatabaseMetaData metaData, String tableName, String columnName)
+            throws SQLException {
+        try (ResultSet resultSet = metaData.getColumns(null, null, tableName, columnName)) {
+            return resultSet.next();
+        }
     }
 }

@@ -1,4 +1,6 @@
-const API_BASE = "http://localhost:8080/api";
+const API_BASE =
+  (window.APP_CONFIG && window.APP_CONFIG.apiBase) ||
+  "http://localhost:8080/api";
 const AUTH_TOKEN_KEY = "bookmarklink.token";
 const AUTH_REMEMBER_KEY = "bookmarklink.remember";
 const AUTH_EMAIL_KEY = "bookmarklink.email";
