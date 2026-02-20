@@ -177,7 +177,7 @@ const setupPasswordToggles = () => {
       button.setAttribute("aria-pressed", showPassword ? "true" : "false");
       button.setAttribute(
         "aria-label",
-        showPassword ? "Hide password" : "Show password"
+        showPassword ? "Hide password" : "Show password",
       );
     });
   });
